@@ -1,8 +1,38 @@
 -- Memory Bank: Initial Schema
 -- Creates all core tables with Row Level Security
+--
+-- NOTE: Cross-referencing policies (those that reference tables defined later)
+-- are grouped at the end of this file to avoid dependency errors.
 
 -- ============================================================
--- PROFILES (extends Supabase auth.users)
+-- HELPER FUNCTIONS
+-- ============================================================
+
+-- Auto-update updated_at timestamp
+create or replace function public.update_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+-- Auto-create profile on signup
+create or replace function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.profiles (id, full_name, avatar_url)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'full_name', ''),
+    coalesce(new.raw_user_meta_data->>'avatar_url', '')
+  );
+  return new;
+end;
+$$ language plpgsql security definer;
+
+-- ============================================================
+-- 1. PROFILES (extends Supabase auth.users)
 -- ============================================================
 create table public.profiles (
   id uuid references auth.users on delete cascade primary key,
@@ -28,52 +58,16 @@ create policy "Users can insert their own profile"
   on public.profiles for insert
   with check (auth.uid() = id);
 
--- Allow users to view profiles of their family connections
-create policy "Users can view connected family profiles"
-  on public.profiles for select
-  using (
-    id in (
-      select recipient_id from public.family_connections
-      where requester_id = auth.uid() and status = 'accepted'
-      union
-      select requester_id from public.family_connections
-      where recipient_id = auth.uid() and status = 'accepted'
-    )
-  );
-
--- Auto-create profile on signup
-create or replace function public.handle_new_user()
-returns trigger as $$
-begin
-  insert into public.profiles (id, full_name, avatar_url)
-  values (
-    new.id,
-    coalesce(new.raw_user_meta_data->>'full_name', ''),
-    coalesce(new.raw_user_meta_data->>'avatar_url', '')
-  );
-  return new;
-end;
-$$ language plpgsql security definer;
-
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
-
--- Auto-update updated_at timestamp
-create or replace function public.update_updated_at()
-returns trigger as $$
-begin
-  new.updated_at = now();
-  return new;
-end;
-$$ language plpgsql;
 
 create trigger profiles_updated_at
   before update on public.profiles
   for each row execute function public.update_updated_at();
 
 -- ============================================================
--- MEMORIES
+-- 2. MEMORIES
 -- ============================================================
 create table public.memories (
   id uuid default gen_random_uuid() primary key,
@@ -105,27 +99,16 @@ create policy "Users can delete their own memories"
   on public.memories for delete
   using (auth.uid() = user_id);
 
--- Users can view memories shared with them
-create policy "Users can view shared memories"
-  on public.memories for select
-  using (
-    id in (
-      select memory_id from public.shared_memories
-      where shared_with_id = auth.uid() and revoked_at is null
-    )
-  );
-
 create trigger memories_updated_at
   before update on public.memories
   for each row execute function public.update_updated_at();
 
--- Index for fast lookups
 create index memories_user_id_idx on public.memories(user_id);
 create index memories_memory_date_idx on public.memories(memory_date);
 create index memories_created_at_idx on public.memories(created_at desc);
 
 -- ============================================================
--- MEMORY MEDIA
+-- 3. MEMORY MEDIA
 -- ============================================================
 create table public.memory_media (
   id uuid default gen_random_uuid() primary key,
@@ -165,20 +148,10 @@ create policy "Users can delete media from their memories"
     )
   );
 
--- Users can view media for shared memories
-create policy "Users can view media for shared memories"
-  on public.memory_media for select
-  using (
-    memory_id in (
-      select memory_id from public.shared_memories
-      where shared_with_id = auth.uid() and revoked_at is null
-    )
-  );
-
 create index memory_media_memory_id_idx on public.memory_media(memory_id);
 
 -- ============================================================
--- TAGS (hashtags)
+-- 4. TAGS (hashtags)
 -- ============================================================
 create table public.tags (
   id uuid default gen_random_uuid() primary key,
@@ -189,7 +162,6 @@ create table public.tags (
 
 alter table public.tags enable row level security;
 
--- Tags are readable by all authenticated users
 create policy "Authenticated users can view tags"
   on public.tags for select
   to authenticated
@@ -203,7 +175,7 @@ create policy "Authenticated users can create tags"
 create index tags_name_idx on public.tags(name);
 
 -- ============================================================
--- MEMORY TAGS (junction table)
+-- 5. MEMORY TAGS (junction table)
 -- ============================================================
 create table public.memory_tags (
   memory_id uuid references public.memories(id) on delete cascade not null,
@@ -237,18 +209,8 @@ create policy "Users can remove tags from their memories"
     )
   );
 
--- Users can view tags on shared memories
-create policy "Users can view tags on shared memories"
-  on public.memory_tags for select
-  using (
-    memory_id in (
-      select memory_id from public.shared_memories
-      where shared_with_id = auth.uid() and revoked_at is null
-    )
-  );
-
 -- ============================================================
--- FAMILY CONNECTIONS
+-- 6. FAMILY CONNECTIONS
 -- ============================================================
 create table public.family_connections (
   id uuid default gen_random_uuid() primary key,
@@ -287,7 +249,7 @@ create index family_connections_requester_idx on public.family_connections(reque
 create index family_connections_recipient_idx on public.family_connections(recipient_id);
 
 -- ============================================================
--- SHARED MEMORIES
+-- 7. SHARED MEMORIES
 -- ============================================================
 create table public.shared_memories (
   id uuid default gen_random_uuid() primary key,
@@ -323,7 +285,7 @@ create index shared_memories_shared_with_idx on public.shared_memories(shared_wi
 create index shared_memories_memory_idx on public.shared_memories(memory_id);
 
 -- ============================================================
--- DAILY PROMPTS (Nexa Lite)
+-- 8. DAILY PROMPTS (Nexa Lite)
 -- ============================================================
 create table public.daily_prompts (
   id uuid default gen_random_uuid() primary key,
@@ -345,7 +307,7 @@ create policy "Authenticated users can view prompts"
   using (true);
 
 -- ============================================================
--- PROMPT RESPONSES
+-- 9. PROMPT RESPONSES
 -- ============================================================
 create table public.prompt_responses (
   id uuid default gen_random_uuid() primary key,
@@ -377,3 +339,51 @@ create trigger prompt_responses_updated_at
 
 create index prompt_responses_user_idx on public.prompt_responses(user_id);
 create index prompt_responses_prompt_idx on public.prompt_responses(prompt_id);
+
+-- ============================================================
+-- 10. CROSS-REFERENCING POLICIES
+-- These reference tables defined earlier, so must come last.
+-- ============================================================
+
+-- Profiles: allow viewing connected family members' profiles
+create policy "Users can view connected family profiles"
+  on public.profiles for select
+  using (
+    id in (
+      select recipient_id from public.family_connections
+      where requester_id = auth.uid() and status = 'accepted'
+      union
+      select requester_id from public.family_connections
+      where recipient_id = auth.uid() and status = 'accepted'
+    )
+  );
+
+-- Memories: allow viewing memories shared with you
+create policy "Users can view shared memories"
+  on public.memories for select
+  using (
+    id in (
+      select memory_id from public.shared_memories
+      where shared_with_id = auth.uid() and revoked_at is null
+    )
+  );
+
+-- Memory media: allow viewing media on shared memories
+create policy "Users can view media for shared memories"
+  on public.memory_media for select
+  using (
+    memory_id in (
+      select memory_id from public.shared_memories
+      where shared_with_id = auth.uid() and revoked_at is null
+    )
+  );
+
+-- Memory tags: allow viewing tags on shared memories
+create policy "Users can view tags on shared memories"
+  on public.memory_tags for select
+  using (
+    memory_id in (
+      select memory_id from public.shared_memories
+      where shared_with_id = auth.uid() and revoked_at is null
+    )
+  );
