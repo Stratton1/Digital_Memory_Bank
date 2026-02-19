@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -16,10 +17,13 @@ import {
   BookOpen,
   Home,
   LogOut,
+  Menu,
   MessageCircle,
+  Search,
   Settings,
   Share2,
   Users,
+  X,
 } from "lucide-react";
 
 interface NavbarProps {
@@ -30,8 +34,18 @@ interface NavbarProps {
   };
 }
 
+const navLinks = [
+  { href: "/dashboard", label: "Home", icon: Home },
+  { href: "/dashboard/memories", label: "Memories", icon: BookOpen },
+  { href: "/dashboard/prompts", label: "Prompts", icon: MessageCircle },
+  { href: "/dashboard/vault", label: "Vault", icon: Share2 },
+  { href: "/dashboard/family", label: "Family", icon: Users },
+  { href: "/dashboard/search", label: "Search", icon: Search },
+];
+
 export function Navbar({ user }: NavbarProps) {
   const router = useRouter();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -60,75 +74,102 @@ export function Navbar({ user }: NavbarProps) {
             Memory Bank
           </Link>
           <nav className="hidden items-center gap-1 md:flex">
-            <Link href="/dashboard">
-              <Button variant="ghost" size="sm" className="gap-2">
-                <Home className="h-4 w-4" />
-                Home
-              </Button>
-            </Link>
-            <Link href="/dashboard/memories">
-              <Button variant="ghost" size="sm" className="gap-2">
-                <BookOpen className="h-4 w-4" />
-                Memories
-              </Button>
-            </Link>
-            <Link href="/dashboard/prompts">
-              <Button variant="ghost" size="sm" className="gap-2">
-                <MessageCircle className="h-4 w-4" />
-                Prompts
-              </Button>
-            </Link>
-            <Link href="/dashboard/vault">
-              <Button variant="ghost" size="sm" className="gap-2">
-                <Share2 className="h-4 w-4" />
-                Vault
-              </Button>
-            </Link>
-            <Link href="/dashboard/family">
-              <Button variant="ghost" size="sm" className="gap-2">
-                <Users className="h-4 w-4" />
-                Family
-              </Button>
-            </Link>
+            {navLinks.map((link) => (
+              <Link key={link.href} href={link.href}>
+                <Button variant="ghost" size="sm" className="gap-2">
+                  <link.icon className="h-4 w-4" />
+                  {link.label}
+                </Button>
+              </Link>
+            ))}
           </nav>
         </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-              <Avatar className="h-9 w-9">
-                <AvatarImage src={user.avatarUrl ?? undefined} alt={user.fullName} />
-                <AvatarFallback className="bg-primary/10 text-sm font-medium text-primary">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <div className="flex items-center gap-2 p-2">
-              <div className="flex flex-col space-y-0.5">
-                <p className="text-sm font-medium">{user.fullName}</p>
-                <p className="text-xs text-muted-foreground">{user.email}</p>
+        <div className="flex items-center gap-2">
+          {/* Mobile menu toggle */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
+          </Button>
+
+          {/* User menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className="relative h-9 w-9 rounded-full"
+              >
+                <Avatar className="h-9 w-9">
+                  <AvatarImage
+                    src={user.avatarUrl ?? undefined}
+                    alt={user.fullName}
+                  />
+                  <AvatarFallback className="bg-primary/10 text-sm font-medium text-primary">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <div className="flex items-center gap-2 p-2">
+                <div className="flex flex-col space-y-0.5">
+                  <p className="text-sm font-medium">{user.fullName}</p>
+                  <p className="text-xs text-muted-foreground">{user.email}</p>
+                </div>
               </div>
-            </div>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/dashboard/settings" className="cursor-pointer gap-2">
-                <Settings className="h-4 w-4" />
-                Settings
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={handleSignOut}
-              className="cursor-pointer gap-2 text-red-600"
-            >
-              <LogOut className="h-4 w-4" />
-              Sign out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link
+                  href="/dashboard/settings"
+                  className="cursor-pointer gap-2"
+                >
+                  <Settings className="h-4 w-4" />
+                  Settings
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={handleSignOut}
+                className="cursor-pointer gap-2 text-red-600"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
+
+      {/* Mobile navigation */}
+      {mobileMenuOpen && (
+        <nav className="border-t border-border/50 bg-card px-4 py-3 md:hidden">
+          <div className="flex flex-col gap-1">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-3"
+                >
+                  <link.icon className="h-4 w-4" />
+                  {link.label}
+                </Button>
+              </Link>
+            ))}
+          </div>
+        </nav>
+      )}
     </header>
   );
 }

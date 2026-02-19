@@ -15,9 +15,41 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Memory Bank — Preserve Your Family's Story",
+  title: {
+    default: "Memory Bank — Preserve Your Family's Story",
+    template: "%s | Memory Bank",
+  },
   description:
-    "A secure digital memory vault for families. Store stories, photos, and precious moments. Share them with the people who matter most.",
+    "A secure digital memory vault for families. Capture stories, answer daily prompts from Nexa, and share precious moments with the people who matter most.",
+  keywords: [
+    "family memories",
+    "digital memory vault",
+    "family stories",
+    "memory journal",
+    "life story",
+    "family history",
+    "daily prompts",
+    "memory preservation",
+  ],
+  authors: [{ name: "Memory Bank" }],
+  openGraph: {
+    type: "website",
+    locale: "en_GB",
+    siteName: "Memory Bank",
+    title: "Memory Bank — Preserve Your Family's Story",
+    description:
+      "A secure digital memory vault for families. Capture stories, answer daily prompts, and share precious moments with the people who matter most.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Memory Bank — Preserve Your Family's Story",
+    description:
+      "A secure digital memory vault for families. Capture stories, answer daily prompts, and share precious moments.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({
