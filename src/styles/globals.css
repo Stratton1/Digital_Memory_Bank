@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+:root {
+  /* Memory Bank — Warm & Nostalgic palette */
+  --color-cream: #FDF8F0;
+  --color-warm-white: #FAF6EF;
+  --color-beige: #F0E6D3;
+  --color-sand: #D4C4A8;
+  --color-warm-grey: #8B8178;
+  --color-amber: #D4A853;
+  --color-gold: #C49B3C;
+  --color-burgundy: #7A3B4E;
+  --color-forest: #4A6741;
+  --color-charcoal: #3D3631;
+  --color-espresso: #2C2420;
+
+  /* Semantic tokens */
+  --background: var(--color-cream);
+  --foreground: var(--color-espresso);
+  --card: var(--color-warm-white);
+  --card-foreground: var(--color-charcoal);
+  --primary: var(--color-amber);
+  --primary-foreground: var(--color-cream);
+  --secondary: var(--color-beige);
+  --secondary-foreground: var(--color-charcoal);
+  --muted: var(--color-sand);
+  --muted-foreground: var(--color-warm-grey);
+  --accent: var(--color-burgundy);
+  --accent-foreground: var(--color-cream);
+  --border: var(--color-beige);
+  --ring: var(--color-amber);
+  --radius: 0.75rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --radius: 0.75rem;
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Lora", ui-serif, Georgia, serif;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
