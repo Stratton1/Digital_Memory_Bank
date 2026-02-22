@@ -1,0 +1,1 @@
+# Repository Structure\n\n## Current\n- src/ (App Router)\n- supabase/ (Migrations)\n- public/ (Static assets)\n\n## Target\n- /docs (Documentation)\n- /src (Source code)\n- /supabase (Database)\n- /public (Assets)\n

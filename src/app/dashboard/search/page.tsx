@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { SearchForm } from "@/components/search/search-form";
+import { searchMemories } from "@/app/dashboard/search/actions";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Search } from "lucide-react";
-import { SearchForm } from "@/components/search/search-form";
 
 export default async function SearchPage({
   searchParams,
@@ -12,97 +12,8 @@ export default async function SearchPage({
 }) {
   const { q } = await searchParams;
   const query = q?.trim() ?? "";
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return null;
-
-  let memories: {
-    id: string;
-    title: string;
-    content: string;
-    memory_date: string | null;
-    location: string | null;
-    created_at: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    memory_tags: any[];
-  }[] = [];
-
-  if (query) {
-    // Full-text search using Postgres text search
-    const { data } = await supabase
-      .from("memories")
-      .select(`
-        id,
-        title,
-        content,
-        memory_date,
-        location,
-        created_at,
-        memory_tags (
-          tags (
-            id,
-            name
-          )
-        )
-      `)
-      .eq("user_id", user.id)
-      .or(`title.ilike.%${query}%,content.ilike.%${query}%,location.ilike.%${query}%`)
-      .order("created_at", { ascending: false })
-      .limit(50);
-
-    memories = data ?? [];
-
-    // Also search by tag name — find matching tags, then find memories with those tags
-    const { data: tagMatches } = await supabase
-      .from("tags")
-      .select("id")
-      .ilike("name", `%${query}%`);
-
-    if (tagMatches && tagMatches.length > 0) {
-      const tagIds = tagMatches.map((t) => t.id);
-      const { data: taggedMemoryIds } = await supabase
-        .from("memory_tags")
-        .select("memory_id")
-        .in("tag_id", tagIds);
-
-      if (taggedMemoryIds && taggedMemoryIds.length > 0) {
-        const existingIds = new Set(memories.map((m) => m.id));
-        const newIds = taggedMemoryIds
-          .map((tm) => tm.memory_id)
-          .filter((id) => !existingIds.has(id));
-
-        if (newIds.length > 0) {
-          const { data: taggedMemories } = await supabase
-            .from("memories")
-            .select(`
-              id,
-              title,
-              content,
-              memory_date,
-              location,
-              created_at,
-              memory_tags (
-                tags (
-                  id,
-                  name
-                )
-              )
-            `)
-            .eq("user_id", user.id)
-            .in("id", newIds)
-            .order("created_at", { ascending: false });
-
-          if (taggedMemories) {
-            memories = [...memories, ...taggedMemories];
-          }
-        }
-      }
-    }
-  }
+  
+  const memories = query ? await searchMemories(query) : [];
 
   return (
     <div className="space-y-6">
@@ -119,7 +30,7 @@ export default async function SearchPage({
       <SearchForm initialQuery={query} />
 
       {query && (
-        <div>
+        <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
           <p className="mb-4 text-sm text-muted-foreground">
             {memories.length} {memories.length === 1 ? "result" : "results"} for
             &ldquo;{query}&rdquo;

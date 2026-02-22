@@ -114,9 +114,9 @@ export default async function MemoryDetailPage({
 
         {isOwner && (
           <div className="mt-6 flex gap-3">
-            <Link href={`/dashboard/memories/${memory.id}/edit`}>
+            {/* <Link href={`/dashboard/memories/${memory.id}/edit`}>
               <Button variant="outline">Edit memory</Button>
-            </Link>
+            </Link> */}
           </div>
         )}
 

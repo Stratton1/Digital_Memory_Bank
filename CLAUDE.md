@@ -198,7 +198,7 @@ supabase/
 - `npm run lint` must pass before commits
 
 ### Documentation
-- CLAUDE.md is the single source of truth
+- CLAUDE.md is the single source of truth (see /docs for details)
 - Code comments only where logic isn't self-evident
 - Decision log for significant choices
 

@@ -2,15 +2,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  BookOpen,
-  Lock,
-  MapPin,
-  Share2,
-} from "lucide-react";
-import { ShareMemoryButton } from "@/components/vault/share-memory-button";
+import { BookOpen, MapPin, Share2, Lock } from "lucide-react";
 
 export default async function VaultPage() {
   const supabase = await createClient();
@@ -21,7 +14,7 @@ export default async function VaultPage() {
   if (!user) return null;
 
   // Fetch memories shared WITH me
-  const { data: sharedWithMe } = await supabase
+  const { data: sharedWithMeRaw } = await supabase
     .from("shared_memories")
     .select(`
       id,
@@ -44,8 +37,18 @@ export default async function VaultPage() {
     .is("revoked_at", null)
     .order("created_at", { ascending: false });
 
+  // Transform data to match UI expectations
+  const sharedWithMe = (sharedWithMeRaw || []).map(item => ({
+    id: item.id,
+    permission: item.permission,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    memory: item.memory as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    owner: item.owner as any,
+  }));
+
   // Fetch memories I've shared with others
-  const { data: sharedByMe } = await supabase
+  const { data: sharedByMeRaw } = await supabase
     .from("shared_memories")
     .select(`
       id,
@@ -64,31 +67,15 @@ export default async function VaultPage() {
     .is("revoked_at", null)
     .order("created_at", { ascending: false });
 
-  // Fetch my non-private memories for sharing
-  const { data: myMemories } = await supabase
-    .from("memories")
-    .select("id, title")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
-
-  // Fetch accepted connections for sharing
-  const { data: sentConns } = await supabase
-    .from("family_connections")
-    .select("recipient:profiles!family_connections_recipient_id_fkey (id, full_name)")
-    .eq("requester_id", user.id)
-    .eq("status", "accepted");
-
-  const { data: recvConns } = await supabase
-    .from("family_connections")
-    .select("requester:profiles!family_connections_requester_id_fkey (id, full_name)")
-    .eq("recipient_id", user.id)
-    .eq("status", "accepted");
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const connections = [
-    ...(sentConns ?? []).map((c) => c.recipient as any as { id: string; full_name: string | null }),
-    ...(recvConns ?? []).map((c) => c.requester as any as { id: string; full_name: string | null }),
-  ];
+   // Transform data
+   const sharedByMe = (sharedByMeRaw || []).map(item => ({
+    id: item.id,
+    permission: item.permission,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    memory: item.memory as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    shared_with: item.shared_with as any,
+  }));
 
   return (
     <div className="space-y-8">
@@ -98,44 +85,17 @@ export default async function VaultPage() {
           <h1 className="font-serif text-3xl font-bold">Shared vault</h1>
         </div>
         <p className="mt-1 text-muted-foreground">
-          Share memories with family and see what they&apos;ve shared with you
+          Memories shared with you by family members
         </p>
       </div>
 
-      {/* Share a memory */}
-      {connections.length > 0 && myMemories && myMemories.length > 0 && (
-        <ShareMemoryButton
-          memories={myMemories}
-          connections={connections}
-        />
-      )}
-
-      {connections.length === 0 && (
-        <Card className="border-border/50 bg-muted/30">
-          <CardContent className="py-6 text-center">
-            <p className="text-sm text-muted-foreground">
-              To share memories, first{" "}
-              <Link href="/dashboard/family" className="font-medium underline underline-offset-4 hover:text-foreground">
-                connect with family members
-              </Link>
-              .
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Shared with me */}
       <div>
-        <h2 className="mb-4 font-serif text-xl font-semibold">
-          Shared with you
-        </h2>
-        {sharedWithMe && sharedWithMe.length > 0 ? (
+        {sharedWithMe.length > 0 ? (
           <div className="space-y-3">
             {sharedWithMe.map((share) => {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const memory = share.memory as any;
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const owner = share.owner as any;
+              const memory = share.memory;
+              const owner = share.owner;
               if (!memory) return null;
 
               const ownerName = owner?.full_name ?? "Someone";
@@ -149,7 +109,7 @@ export default async function VaultPage() {
               return (
                 <Link
                   key={share.id}
-                  href={`/dashboard/vault/${memory.id}`}
+                  href={`/dashboard/memories/${memory.id}`}
                 >
                   <Card className="border-border/50 transition-colors hover:bg-card/80">
                     <CardContent className="pt-6">
@@ -160,10 +120,10 @@ export default async function VaultPage() {
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-muted-foreground mb-1">
                             Shared by {ownerName}
                           </p>
-                          <h3 className="mt-1 font-serif text-lg font-semibold">
+                          <h3 className="font-serif text-lg font-semibold">
                             {memory.title}
                           </h3>
                           <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
@@ -212,23 +172,21 @@ export default async function VaultPage() {
       </div>
 
       {/* Shared by me */}
-      {sharedByMe && sharedByMe.length > 0 && (
+      {sharedByMe.length > 0 && (
         <div>
           <h2 className="mb-4 font-serif text-xl font-semibold text-muted-foreground">
             Memories you&apos;ve shared
           </h2>
           <div className="space-y-2">
             {sharedByMe.map((share) => {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const memory = share.memory as any;
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const person = share.shared_with as any;
+              const memory = share.memory;
+              const person = share.shared_with;
               if (!memory) return null;
 
               return (
                 <div
                   key={share.id}
-                  className="flex items-center justify-between rounded-lg border border-border/50 px-4 py-3"
+                  className="flex items-center justify-between rounded-lg border border-border/50 px-4 py-3 bg-card/30"
                 >
                   <div className="min-w-0">
                     <p className="text-sm font-medium">{memory.title}</p>
@@ -236,8 +194,8 @@ export default async function VaultPage() {
                       Shared with {person?.full_name ?? "someone"}
                     </p>
                   </div>
-                  <Badge variant="outline" className="shrink-0 text-xs">
-                    <Lock className="mr-1 h-3 w-3" />
+                  <Badge variant="outline" className="shrink-0 text-xs gap-1">
+                    <Lock className="h-3 w-3" />
                     {share.permission}
                   </Badge>
                 </div>
