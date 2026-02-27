@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,7 +45,13 @@ const navLinks = [
 
 export function Navbar({ user }: NavbarProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  function isActive(href: string) {
+    if (href === "/dashboard") return pathname === "/dashboard";
+    return pathname.startsWith(href);
+  }
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -74,14 +80,21 @@ export function Navbar({ user }: NavbarProps) {
             Memory Bank
           </Link>
           <nav className="hidden items-center gap-1 md:flex">
-            {navLinks.map((link) => (
-              <Link key={link.href} href={link.href}>
-                <Button variant="ghost" size="sm" className="gap-2">
-                  <link.icon className="h-4 w-4" />
-                  {link.label}
-                </Button>
-              </Link>
-            ))}
+            {navLinks.map((link) => {
+              const active = isActive(link.href);
+              return (
+                <Link key={link.href} href={link.href}>
+                  <Button
+                    variant={active ? "secondary" : "ghost"}
+                    size="sm"
+                    className={`gap-2 ${active ? "font-semibold" : ""}`}
+                  >
+                    <link.icon className="h-4 w-4" />
+                    {link.label}
+                  </Button>
+                </Link>
+              );
+            })}
           </nav>
         </div>
 
@@ -152,21 +165,24 @@ export function Navbar({ user }: NavbarProps) {
       {mobileMenuOpen && (
         <nav className="border-t border-border/50 bg-card px-4 py-3 md:hidden">
           <div className="flex flex-col gap-1">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start gap-3"
+            {navLinks.map((link) => {
+              const active = isActive(link.href);
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMobileMenuOpen(false)}
                 >
-                  <link.icon className="h-4 w-4" />
-                  {link.label}
-                </Button>
-              </Link>
-            ))}
+                  <Button
+                    variant={active ? "secondary" : "ghost"}
+                    className={`w-full justify-start gap-3 ${active ? "font-semibold" : ""}`}
+                  >
+                    <link.icon className="h-4 w-4" />
+                    {link.label}
+                  </Button>
+                </Link>
+              );
+            })}
           </div>
         </nav>
       )}

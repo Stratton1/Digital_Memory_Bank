@@ -58,7 +58,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${lora.variable} ${jakarta.variable}`}>
+    <html lang="en-GB" className={`${lora.variable} ${jakarta.variable}`}>
       <body className="min-h-screen bg-background text-foreground antialiased">
         {children}
       </body>

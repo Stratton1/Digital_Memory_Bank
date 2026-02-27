@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Calendar, Globe, Lock, MapPin } from "lucide-react";
+import { DeleteMemoryButton } from "@/components/memories/delete-memory-button";
 
 export default async function MemoryDetailPage({
   params,
@@ -29,6 +31,12 @@ export default async function MemoryDetailPage({
           id,
           name
         )
+      ),
+      memory_media (
+        id,
+        storage_path,
+        caption,
+        display_order
       )
     `)
     .eq("id", id)
@@ -42,6 +50,10 @@ export default async function MemoryDetailPage({
   const tags = (memory.memory_tags as any[])
       ?.map((mt) => mt.tags)
       .filter(Boolean) ?? [];
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const media = ((memory.memory_media as any[]) ?? [])
+    .sort((a, b) => a.display_order - b.display_order);
 
   const isOwner = memory.user_id === user.id;
 
@@ -102,6 +114,30 @@ export default async function MemoryDetailPage({
           )}
         </header>
 
+        {media.length > 0 && (
+          <div className="mb-6 grid gap-3 grid-cols-2 sm:grid-cols-3">
+            {media.map((item: { id: string; storage_path: string; caption?: string }) => {
+              const { data: { publicUrl } } = supabase.storage
+                .from("memory-photos")
+                .getPublicUrl(item.storage_path);
+              return (
+                <div
+                  key={item.id}
+                  className="relative aspect-square overflow-hidden rounded-lg border border-border/50"
+                >
+                  <Image
+                    src={publicUrl}
+                    alt={item.caption ?? memory.title}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 640px) 50vw, 33vw"
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         <Separator className="my-6" />
 
         <Card className="border-border/50">
@@ -114,9 +150,10 @@ export default async function MemoryDetailPage({
 
         {isOwner && (
           <div className="mt-6 flex gap-3">
-            {/* <Link href={`/dashboard/memories/${memory.id}/edit`}>
+            <Link href={`/dashboard/memories/${memory.id}/edit`}>
               <Button variant="outline">Edit memory</Button>
-            </Link> */}
+            </Link>
+            <DeleteMemoryButton memoryId={memory.id} />
           </div>
         )}
 

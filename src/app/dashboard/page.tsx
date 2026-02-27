@@ -40,7 +40,7 @@ export default async function DashboardPage() {
     .limit(1);
 
   if (answered.length > 0) {
-    promptQuery = promptQuery.not("id", "in", `(${answered.join(",")})`);
+    promptQuery = promptQuery.not("id", "in", `(${answered.map((id) => `"${id}"`).join(",")})`);
   }
 
   const { data: todaysPrompt } = await promptQuery.single();

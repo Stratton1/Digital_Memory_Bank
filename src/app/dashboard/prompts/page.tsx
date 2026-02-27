@@ -1,8 +1,14 @@
+import { createClient } from "@/lib/supabase/server";
 import { getDailyPrompt } from "@/lib/db/prompts";
 import { DailyPromptCard } from "@/components/prompts/daily-prompt-card";
 
 export default async function PromptsPage() {
-  const prompt = await getDailyPrompt();
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const prompt = await getDailyPrompt(user?.id);
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl space-y-8">
