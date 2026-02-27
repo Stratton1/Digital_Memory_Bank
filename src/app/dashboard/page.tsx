@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, MessageCircle, Plus, Sparkles } from "lucide-react";
+import { BookOpen, Calendar, MessageCircle, Plus, Sparkles } from "lucide-react";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -65,6 +65,24 @@ export default async function DashboardPage() {
     .select("*", { count: "exact", head: true })
     .eq("user_id", user.id);
 
+  // "On This Day" — memories from this day in previous years
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  const day = now.getDate();
+
+  const { data: onThisDayMemories } = await supabase
+    .from("memories")
+    .select("id, title, memory_date")
+    .eq("user_id", user.id)
+    .not("memory_date", "is", null)
+    .order("memory_date", { ascending: false });
+
+  const matchingMemories = (onThisDayMemories ?? []).filter((m) => {
+    if (!m.memory_date) return false;
+    const d = new Date(m.memory_date);
+    return d.getMonth() + 1 === month && d.getDate() === day && d.getFullYear() !== now.getFullYear();
+  });
+
   const firstName = profile?.full_name?.split(" ")[0] ?? "there";
 
   return (
@@ -114,6 +132,39 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* On This Day */}
+      {matchingMemories.length > 0 && (
+        <Card className="border-amber-200/60 bg-gradient-to-br from-amber-50/50 to-card">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-amber-600" />
+              <CardTitle className="font-serif text-lg">On this day</CardTitle>
+            </div>
+            <CardDescription>
+              {matchingMemories.length === 1
+                ? "You captured a memory on this day in a previous year."
+                : `You captured ${matchingMemories.length} memories on this day in previous years.`}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {matchingMemories.slice(0, 3).map((m) => (
+                <Link
+                  key={m.id}
+                  href={`/dashboard/memories/${m.id}`}
+                  className="flex items-center justify-between rounded-lg border border-amber-100 bg-white/50 px-4 py-3 transition-colors hover:bg-amber-50/50"
+                >
+                  <span className="font-medium text-sm">{m.title}</span>
+                  <Badge variant="outline" className="text-xs text-amber-700 border-amber-200">
+                    {new Date(m.memory_date!).getFullYear()}
+                  </Badge>
+                </Link>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Today's prompt */}
       {todaysPrompt && (

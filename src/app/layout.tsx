@@ -46,6 +46,9 @@ export const metadata: Metadata = {
     description:
       "A secure digital memory vault for families. Capture stories, answer daily prompts, and share precious moments.",
   },
+  icons: {
+    icon: "/icon.svg",
+  },
   robots: {
     index: true,
     follow: true,

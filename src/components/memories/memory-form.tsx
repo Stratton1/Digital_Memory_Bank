@@ -255,8 +255,12 @@ export function MemoryForm({ mode = 'create', memoryId, initialData }: MemoryFor
               value={formData.content}
               onChange={handleChange}
               required
+              maxLength={10000}
               className="min-h-[200px] border-amber-200 focus-visible:ring-amber-500 font-serif leading-relaxed"
             />
+            <p className="text-xs text-muted-foreground text-right">
+              {formData.content.length.toLocaleString()} / 10,000
+            </p>
           </div>
 
           <div className="space-y-2">
